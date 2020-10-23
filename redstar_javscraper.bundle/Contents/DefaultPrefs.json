@@ -1,0 +1,68 @@
+[
+  	{
+		"id": "papago_use",
+		"label": "파파고 한글번역 사용하기(아래 API Key 입력 필수)",
+		"type": "bool",
+		"default": "true"
+	},
+  	{
+		"id": "papagokey",
+		"label": "파파고 번역용 API Key(ClientID,ClientSecret ClientID2,ClientSecret2 공백으로 분리)",
+		"type": "text",
+		"default": ""
+	},
+	{
+		"id": "uncensored_class",
+		"label": "파일명에 아래의 문자열이 있으면 컨텐츠 등급에 '노모'로 표기(기본은 유모 표기, 공백으로 구분)",
+		"type": "text",
+		"default": "UNC 노모"
+	},
+	{
+		"id": "timeout",
+		"label": "응답 타임아웃 시간 지정(Default 20s)",
+		"type": "text",
+		"default": "20"
+	},
+	{
+		"id": "dmm_use",
+		"label": "DMM.co.jp 검색여부(Default 사용)",
+		"type": "bool",
+		"default": "true"
+	},
+	{
+		"id": "r18_use",
+		"label": "R18.com 검색여부(Default 사용)",
+		"type": "bool",
+		"default": "true"
+	},
+	{
+		"id": "javbus_use",
+		"label": "JavBus 검색여부(Default 사용)",
+		"type": "bool",
+		"default": "true"
+	},
+	{
+		"id": "pornav_use",
+		"label": "PornAV 검색여부(FC2, Tokyohot등)(Default 사용)",
+		"type": "bool",
+		"default": "true"
+	},
+	{
+		"id": "searchsiteinfo",
+		"label": "일치된 컨텐츠 검색 사이트 정보를 '요약'에 추가",
+		"type": "bool",
+		"default": "true"
+	},
+	{
+		"id": "create_collection_studio",
+		"label": "studio로 컬렉션 만들기(Default 미사용)",
+		"type": "bool",
+		"default": "false"
+	},
+	{
+		"id": "create_collection_series",
+		"label": "Series로 컬렉션 만들기(Default 미사용)",
+		"type": "bool",
+		"default": "false"
+	}
+]
