@@ -12,16 +12,23 @@
 		"default": ""
 	},
 	{
-		"id": "uncensored_class",
-		"label": "파일명에 아래의 문자열이 있으면 컨텐츠 등급에 '노모'로 표기(기본은 유모 표기, 공백으로 구분)",
-		"type": "text",
-		"default": "UNC 노모"
-	},
-	{
 		"id": "timeout",
 		"label": "응답 타임아웃 시간 지정(Default 20s)",
 		"type": "text",
 		"default": "20"
+	},
+	{
+		"id": "img_cnt",
+		"label": "다운로드할 배경 이미지 개수 설정(크롤링 속도를 위해 적게 설정하세요)",
+		"type": "enum",
+		"values": ["1", "2", "3", "5", "10", "99"],
+		"default": "1"
+	},
+	{
+		"id": "uncensored_class",
+		"label": "파일명 중'UNC, 노모' 발견 시 컨텐츠 등급에 '노모' 표기여부",
+		"type": "bool",
+		"default": "true"
 	},
 	{
 		"id": "dmm_use",

@@ -191,7 +191,7 @@ def Get_actor_info(nEntity):
 	Log('nEntity(Search Actor String) : ' + nEntity)
 	Search_URL = 'https://hentaku.co/search/'
 	post_values = {'search_str': nEntity}
-	searchResults = HTTP.Request(Search_URL, values=post_values).content
+	searchResults = HTTP.Request(Search_URL, values=post_values, timeout=int(Prefs['timeout'])).content
 	Log('############# Actor Info from Hentaku ##############')
 	# Log(searchResults)
 	nResult=[]
@@ -271,21 +271,34 @@ def poombun_check(txt):
 def uncensored_check(txt):
 	# 파일명에 노모 포함인지 여부 확인
 	txt=txt.upper()
+	txt=urllib.unquote(txt).decode('utf8')
+	Log('Uncensored check txt: ' + txt	)
 
-	if (str(Prefs['uncensored_class']) <> ''):
-		nUnctxt = str(Prefs['uncensored_class']).split(' ')
-		j = len(nUnctxt)
-		for i in range(0, j):
-			Log('Uncensored text Check: ' + nUnctxt[i])
-			if (txt.find(nUnctxt[i]) <> -1):
-				return 1
-		return 0
+	if (str(Prefs['uncensored_class']) == 'True'):
+		if ((txt.find('UNC') > -1) or (txt.find('노모') > -1) ):
+			return 1
+	return 0
+
+		# nUnctxt = str(Prefs['uncensored_class']).split(' ')
+		# j = len(nUnctxt)
+		# for i in range(0, j):
+		# 	Log('Uncensored text Check: ' + nUnctxt[i])
+		# 	a=txt.find(nUnctxt[i])
+		# 	Log('a: ' + str(a))
+		# 	if (a > -1):
+		# 		Log('Text Found!')
+		# 		return 1
+		# return 0
 
 class redstar_javscraper(Agent.Movies):
 	name = 'redstar_javscraper'
 	languages = [Locale.Language.English,]
 	primary_provider = True
 	accepts_from = ['com.plexapp.agents.localmedia']
+
+	# def Log(self, message, *args):
+	# 	if Prefs['debug']:
+	# 		Log(message, *args)
 
 	def search(self, results, media, lang):
 		#https://www.javlibrary.com/
@@ -304,46 +317,53 @@ class redstar_javscraper(Agent.Movies):
 
 		if (str(Prefs['dmm_use']) == 'True'):
 			nResult=self.dmm_search(results, media, lang)
-			Log('dmm result: ' + str(nResult))
+			# Log('dmm result: ' + str(nResult))
 		if (str(Prefs['r18_use']) == 'True' and nResult == 0):
 			nResult=self.r18_search(results, media, lang)
-			Log('r18 result: ' + str(nResult))
+			# Log('r18 result: ' + str(nResult))
 		if (str(Prefs['javbus_use']) == 'True' and nResult == 0):
 			nResult=self.javbus_search(results, media, lang)
-			Log('jabus result: '  + str(nResult))
+			# Log('jabus result: '  + str(nResult))
 		if (str(Prefs['pornav_use']) == 'True' and nResult == 0):
 			nResult=self.pornav_search(results, media, lang)
-			Log('pornav result: '  + str(nResult))
+			# Log('pornav result: '  + str(nResult))
 		if (nResult == 0):
 			Log('xxx Search failed on all sites. xxx')
 		Log('search end')
 
 	def update(self, metadata, media, lang):
 
-		nIDs = media.title.split('_')
-		nSite = nIDs[0]
-		if (nSite.find('_') == -1):
-			nSite=' '
-		Log(' Update site : ' + nSite)
-		if (nSite == ''):
-			return
-
-		Log('### Uncensored: ' + nIDs[1])
-		if (nIDs[1] == 'U'): metadata.content_rating = '노모'
-		if (nIDs[1] == 'C'): metadata.content_rating = '유모'
-
 		Log("####### Start Update #########")
+		nTitle=media.title
+		Log('MediaTitle: ' + nTitle)
+		# name = '[' + id + ']§' + title + '§' + 'DMMa' + '§' + uncResult
+		# 0: ID값[OAE-101]   /   1: 타이틀명 PerfectBody..   /  2: 검색사이트 구분자   /  3: 노모유모확인
+		if (nTitle.find('§') <> -1):
+			nIDs = nTitle.split('§')
+			nOrgID = nIDs[0]
+			nSite = nIDs[2]
+			Log('### Uncensored: ' + nIDs[3] + ' Update site : ' + nSite)
+			if (nIDs[3] == 'U'):
+				metadata.content_rating = '노모'
+				Log('ContentRating: 노모')
+			if (nIDs[3] == 'C'):
+				metadata.content_rating = '유모'
+				Log('ContentRating: 유모')
+		else:
+			nSite=' '
+			nOrgID=nTitle
+
 		if (str(Prefs['dmm_use']) == 'True' and ((nSite == 'DMMa') or (nSite == 'DMMo') or (nSite == ' '))):
-			nResult=self.dmm_update(metadata, media, lang)
+			nResult=self.dmm_update(metadata, media, lang, nOrgID)
 			Log('dmm result: ' + str(nResult))
 		elif (str(Prefs['r18_use']) == 'True' and ((nSite == 'r18')or (nSite == ' '))):
-			nResult=self.r18_update(metadata, media, lang)
+			nResult=self.r18_update(metadata, media, lang, nOrgID)
 			Log('r18 result: ' + str(nResult))
 		elif (str(Prefs['javbus_use']) == 'True' and ((nSite == 'javbus')or (nSite == ' '))):
-			nResult=self.javbus_update(metadata, media, lang)
+			nResult=self.javbus_update(metadata, media, lang, nOrgID)
 			Log('jabus result: ' + str(nResult))
 		elif (str(Prefs['pornav_use']) == 'True' and ((nSite == 'pornav')or (nSite == ' '))):
-			nResult=self.pornav_update(metadata, media, lang)
+			nResult=self.pornav_update(metadata, media, lang, nOrgID)
 			Log('pornav result: ' + str(nResult))
 		Log("####### End update #########")
 
@@ -375,11 +395,12 @@ class redstar_javscraper(Agent.Movies):
 				searchResults=String_slice(searchResults,'<ul id="list">','(function()')
 				content_id = String_slice(searchResults,'content_id":"','"')
 				Log(' Content_id: ' + content_id)
+				title = String_slice(searchResults, 'class="txt">', '<')
 				id= org_id
-				title=String_slice(searchResults,'class="txt">','<')
+				name= '[' + id + ']§' + title + '§' + 'DMMo' + '§' + uncResult
 				score=100
-				results.Append(MetadataSearchResult(id=content_id, name="DMMo_"+uncResult+"[" + id + "] " + title, score=score, lang=lang))
-				Log('ContentID: ' + content_id + ' Org_ID: ' + org_id)
+				results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
+				Log('##Search Update Result ==> id: ' + content_id + ' name: ' + name + ' score : ' + str(score))
 				return 1
 			else:
 				Log('DMM Video result Not found')
@@ -408,8 +429,9 @@ class redstar_javscraper(Agent.Movies):
 				Log('amature ContentID: ' + content_id)
 				id= org_id
 				title=String_slice(searchResults,'class="txt">','<')
+				name = '[' + id + ']§' + title + '§' + 'DMMa' + '§' + uncResult
 				score=100
-				results.Append(MetadataSearchResult(id=content_id, name="DMMa_"+uncResult+"[" + id + "] " + title, score=score, lang=lang))
+				results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
 				return 1
 		else:
 			Log('DMM Amateur result Not found')
@@ -451,8 +473,9 @@ class redstar_javscraper(Agent.Movies):
 				if title.startswith("SALE"):
 					title = title[4:]
 				Log(id + " : " + title)
+				name = '[' + id + ']§' + title + '§' + 'r18' + '§' + uncResult
 				score = 100 - Util.LevenshteinDistance(id.lower(), release_id.lower())
-				results.Append(MetadataSearchResult(id=content_id, name="r18_" + uncResult +"_[" + id + "] " + title, score=score, lang=lang))
+				results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
 				Log('ID: ' + content_id + ' name: ' + "[" + id + "] " + title)
 			if (findcontent==0):
 				Log('@@@ r18 검색결과 없음(Result not found)')
@@ -476,7 +499,7 @@ class redstar_javscraper(Agent.Movies):
 
 		# Log('******* javbus Video 검색 시작(Media search start) ****** ')
 		Log("Release ID:    " + str(release_id))
-		try: searchResults=HTTP.Request(SEARCH_URL + release_id).content # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
+		try: searchResults=HTTP.Request(SEARCH_URL + release_id, timeout=int(Prefs['timeout'])).content # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
 		except:	return 0
 		# Log(searchResults)
 		if (searchResults <> ''):
@@ -495,7 +518,8 @@ class redstar_javscraper(Agent.Movies):
 				id = org_id
 				title = String_slice(searchResults, 'title="', '">')
 				score = 100
-				results.Append(MetadataSearchResult(id=content_id, name="javbus_" + uncResult + "_[" + id + "] " + title, score=score, lang=lang))# id는 내부적사용, name은 미리보기 타이틀명
+				name = '[' + id + ']§' + title + '§' + 'javbus' + '§' + uncResult
+				results.Append(MetadataSearchResult(id=content_id, name=name , score=score, lang=lang))# id는 내부적사용, name은 미리보기 타이틀명
 				Log('ContentID: ' + content_id + ' org_id: ' + org_id)
 				# Log('Title: ' + title)
 				return 1
@@ -524,12 +548,31 @@ class redstar_javscraper(Agent.Movies):
 			release_id = org_id
 
 		Log("Release ID:    " + str(release_id) + ' # org_id: ' + org_id)
-		try:
+		try:#, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])
+			# HTTP.ClearCache()
+			# HTTP.CacheTime = 10800
+			# HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0'
+			# HTTP.Headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
+			# HTTP.Headers['Accept-Language'] = 'ko,en-US;q=0.9,en;q=0.8'
+			# HTTP.Headers['Accept-Encoding'] = 'gzip, deflate'
+			# HTTP.Headers['Host'] = 'pornav.co'
+			# HTTP.Headers['Upgrade-Insecure-Requests'] = '1'
+			# HTTP.Headers['Connection'] = 'keep-alive'
 			searchResults = HTTP.Request(SEARCH_URL + release_id).content  # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
 		except:
+			Log( 'pornav search exception')
 			return 0
 
-		# Log(searchResults)
+
+
+
+
+
+
+
+
+
+		Log(searchResults)
 		if (searchResults <> ''):
 			nResult = searchResults.find('<div id="grid-container')  # 검색결과 확인
 			# Log(searchResults)
@@ -550,7 +593,8 @@ class redstar_javscraper(Agent.Movies):
 					id = org_id
 					title = String_slice(searchResults, 'data-title="' + release_id + ' ', '"')
 					score = 100
-					results.Append(MetadataSearchResult(id=content_id, name='pornav_' + uncResult + '_[' + id + '] ' + title, score=score,
+					name = '[' + id + ']§' + title + '§' + 'pornav' + '§' + uncResult
+					results.Append(MetadataSearchResult(id=content_id, name=name , score=score,
 														lang=lang))  # id는 내부적사용, name은 미리보기 타이틀명
 					Log('ContentID: ' + content_id + ' org_id: ' + org_id)
 					return 1
@@ -558,12 +602,15 @@ class redstar_javscraper(Agent.Movies):
 		Log('pornav result Not found')
 		return 0
 
-	def dmm_update(self, metadata, media, lang):
+	def dmm_update(self, metadata, media, lang, nOrgID):
 
 		################################################
 		################## DMM update ##################
 		################################################
-		org_id=metadata.id.replace('00','-')
+		if (nOrgID.find('[') <> -1 ):
+			org_id=nOrgID
+		else:
+			org_id=metadata.id.replace('00','-')
 
 		Log('### 검색 사이트: DMM 일반 영상 / UpdateSite: DMM Video ###')
 		DETAIL_URL = 'https://www.dmm.co.jp/digital/videoa/-/detail/=/cid='
@@ -584,14 +631,14 @@ class redstar_javscraper(Agent.Movies):
 			if (searchResults == ''):
 				return 0
 		# Log(searchResults)
-		id =org_id
+		id =org_id.upper()
 		nTitle=String_slice(searchResults, 'alt="', '"')
 		nTitle_Trans = Papago_Trans(nTitle,'ja')
 		Log(' title : ' + nTitle + ' title_ko: ' + nTitle_Trans)
 
 		# 제목
-		metadata.title = "[" + id.upper() + "] " + nTitle_Trans
-		metadata.title_sort = id + ' ' + nTitle_Trans
+		metadata.title = id + " " + nTitle_Trans
+		metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 		metadata.original_title = nTitle
 
 		# 스튜디오
@@ -647,11 +694,12 @@ class redstar_javscraper(Agent.Movies):
 			if (str(Prefs['searchsiteinfo']) == 'True'):metadata.summary='[DMM] ' + metadata.summary
 
 		# 장르
-		metadata.roles.clear()
+		metadata.genres.clear()
 		nGenreName=Extract_str(searchResults,'ジャンル：', '</tr>')
 		j=len(nGenreName)
 		for i in range(0,j):
 			role = metadata.roles.new()
+			nGenreName[i]=nGenreName[i].replace('.','')
 			nGenreName_ko=Papago_Trans(nGenreName[i],'ja')
 			# Log(nGenreName[i])
 			# Log(nGenreName_ko)
@@ -677,21 +725,28 @@ class redstar_javscraper(Agent.Movies):
 		Log("small Poster URL / 포스터 주소 : " + posterURL_Small)
 		Log("Large Poster URL / 포스터 주소 : " + posterURL_Large)
 		try:
-			metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small), sort_order=1)
+			if(posterURL_Small<>''):
+				metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small, timeout=int(Prefs['timeout'])), sort_order=1)
 		except:
 			Log(' Can not load Small Poster')
 
-		try:metadata.posters[posterURL_Large] = Proxy.Preview(HTTP.Request(posterURL_Large), sort_order=2)
+		try:
+			if(posterURL_Large<>''):
+				metadata.posters[posterURL_Large] = Proxy.Preview(HTTP.Request(posterURL_Large, timeout=int(Prefs['timeout'])), sort_order=2)
 		except:	Log(' Can not load Large Poster')
 		sTemp = String_slice(searchResults, 'div id="sample-image-block"', '<div class')
 		# Log(sTemp)
 		j=sTemp.count('img src')
-		#Log(int(j))
+		imgcnt=int(Prefs['img_cnt'])
+		if(imgcnt <= j): j=imgcnt
+		Log('Image count: ')
+		Log(j)
 		if (j <> -1):
 			for i in range(0,j):
 				bgimg=bgimgURL + metadata.id + '/' + metadata.id + bgimgExt + str(i+1) + '.jpg'
 				try:
-					metadata.art[bgimg] = Proxy.Preview(HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}).content, sort_order=i+1)
+					if (bgimg <> ''):
+						metadata.art[bgimg] = Proxy.Preview(HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order=i+1)
 				except:
 					Log('###' + bgimg + ' Can not load')
 
@@ -729,7 +784,7 @@ class redstar_javscraper(Agent.Movies):
 		Log('******* DMM 미디어 업데이트 완료/Media Update completed ****** ')
 		return 1
 
-	def r18_update(self, metadata, media, lang):
+	def r18_update(self, metadata, media, lang, nOrgID):
 
 		Log('****** 미디어 업데이트(상세항목) 시작 / r18 Media Update Start *******')
 		# Log("Update ID:   " + str(metadata.id) +  ' Original ID: ' + org_id)
@@ -740,6 +795,8 @@ class redstar_javscraper(Agent.Movies):
 		# r18 사이트 검색
 		DETAIL_URL = 'https://www.r18.com/videos/vod/movies/detail/-/id='
 		DETAIL_URL2 = 'https://www.r18.com/videos/vod/amateur/detail/-/id='
+
+		org_id = nOrgID
 
 		#일반 검색에서 안나올 경우 아마추어 URL로 다시 확인함
 		try:
@@ -752,12 +809,12 @@ class redstar_javscraper(Agent.Movies):
 			except:
 				return 0
 
-		id = detailItem(root, '//dt[contains(text(), "DVD ID")]/following-sibling::dd[1]')  # 작품 ID
-		id = id.upper()
+		# id = detailItem(root, '//dt[contains(text(), "DVD ID")]/following-sibling::dd[1]')  # 작품 ID
+		id = org_id.upper()
 		nTitle=detailItem(root,'//cite[@itemprop="name"]')
 		nTitle_Trans=Papago_Trans(nTitle)
-		metadata.title= "[" + id + "] " + nTitle_Trans
-		metadata.title_sort = id + ' ' + nTitle_Trans
+		metadata.title= id + " " + nTitle_Trans
+		metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 		metadata.original_title = nTitle
 		metadata.studio = detailItem(root,'//dd[@itemprop="productionCompany"]//a') # 스튜디오 정보
 		metadata.studio = Papago_Trans(str(metadata.studio))
@@ -790,6 +847,7 @@ class redstar_javscraper(Agent.Movies):
 			genreName = category.text_content().strip()
 			if "Featured" in genreName or "Sale" in genreName:
 				continue
+			genreName=genreName.replace('.','')
 			nTrans=Papago_Trans(genreName)
 			metadata.genres.add(nTrans)
 			Log('metadata.genre : ' + nTrans)
@@ -817,18 +875,28 @@ class redstar_javscraper(Agent.Movies):
 		# Posters/Background
 		posterURL = root.xpath('//img[@itemprop="image"]')[0].get("src")
 		Log("Poster URL / 포스터 주소 : " + posterURL)
-		try:metadata.posters[posterURL] = Proxy.Preview(HTTP.Request(posterURL, headers={'Referer': 'http://www.google.com'}).content, sort_order = 1)
+		try:
+			if(posterURL<>''):
+				metadata.posters[posterURL] = Proxy.Preview(HTTP.Request(posterURL, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order = 1)
 		except: Log(posterURL + ' Not Load')
 		posterURL=posterURL.replace('ps.jpg','pl.jpg')
-		try:metadata.posters[posterURL] = Proxy.Preview(HTTP.Request(posterURL, headers={'Referer': 'http://www.google.com'}).content, sort_order=2)
+		try:
+			if (posterURL <> ''):
+				metadata.posters[posterURL] = Proxy.Preview(HTTP.Request(posterURL, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order=2)
 		except: Log(posterURL + ' Not Load')
 		scenes = root.xpath('//ul[contains(@class, "product-gallery")]//img')
 		i=1
+		imgcnt=int(Prefs['img_cnt'])
+
+		Log('Image count: ')
 		for scene in scenes:
 			background = scene.get("data-original").replace("js-", "jp-")
 			Log("백그라운드 URL BackgroundURL: " + background)
-			try:metadata.art[background] = Proxy.Preview(HTTP.Request(background, headers={'Referer': 'http://www.google.com'}).content, sort_order = i)
+			try:
+				if(background <>''):
+					metadata.art[background] = Proxy.Preview(HTTP.Request(background, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order = i)
 			except:Log(background + ' Not Load')
+			if (imgcnt <= i): break
 			i=i+1
 
 		Log('******* 미디어 업데이트 완료 ****** ')
@@ -852,7 +920,7 @@ class redstar_javscraper(Agent.Movies):
 
 		return 1
 
-	def javbus_update(self, metadata, media, lang):
+	def javbus_update(self, metadata, media, lang, nOrgID):
 
 		# nIDs[0]: 검색용 품번  nIDs[1]: 검색된 사이트(DMM, R18)   nIDs[2]: 아마추어(C)or일반(A)  nIDs[3]: 오리지널 품번(OAE-101)
 		Log('****** 미디어 업데이트(상세항목) 시작 / Javbus Media Update Start *******')
@@ -864,8 +932,10 @@ class redstar_javscraper(Agent.Movies):
 		Log('### 검색 사이트: javbus 일반 영상 / UpdateSite: javbus Video ###')
 		DETAIL_URL = 'https://www.javbus.com/'
 
+		org_id=nOrgID
+
 		try:
-			searchResults = HTTP.Request(DETAIL_URL + metadata.id , headers = {'Referer': 'http://www.google.com'}).content
+			searchResults = HTTP.Request(DETAIL_URL + metadata.id , headers = {'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content
 		except:
 			Log('@@@ Update content load failed')
 			return 0
@@ -880,7 +950,7 @@ class redstar_javscraper(Agent.Movies):
 			Log('@@@ Update content search result failed2')
 			return 0
 		# Log(searchResults)
-		id = metadata.id
+		id = org_id.upper()
 		nTitle = String_slice(searchResults, 'title="', '"')
 		nTitle_Trans = Papago_Trans(nTitle, 'ja')
 		Log(' title : ' + nTitle)
@@ -889,8 +959,8 @@ class redstar_javscraper(Agent.Movies):
 		# 제목
 		try:
 			Log('=======  title Info start =========')
-			metadata.title = "[" + id.upper() + "] " + nTitle_Trans
-			metadata.title_sort = id + ' ' + nTitle_Trans
+			metadata.title = id + " " + nTitle_Trans
+			metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 			metadata.original_title = nTitle
 			Log('=======  title Info end =========')
 		except:
@@ -956,6 +1026,7 @@ class redstar_javscraper(Agent.Movies):
 			j = len(nGenreName)
 			for i in range(0, j):
 				role = metadata.roles.new()
+				nGenreName[i] = nGenreName[i].replace('.', '')
 				nGenreName_ko = Papago_Trans(nGenreName[i], 'ja')
 				# Log(nGenreName[i])
 				# Log(nGenreName_ko)
@@ -997,9 +1068,13 @@ class redstar_javscraper(Agent.Movies):
 			posterURL_Small = posterURL_Large.replace('_b.jpg','.jpg').replace('cover', 'thumb')
 			Log("small Poster URL / 포스터 주소 : " + posterURL_Small)
 			Log("Large Poster URL / 포스터 주소 : " + posterURL_Large)
-			try:metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small), sort_order=1)
+			try:
+				if(posterURL_Small <>''):
+					metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small, timeout=int(Prefs['timeout'])), sort_order=1)
 			except:	Log(' Can not load Small Poster')
-			try:metadata.posters[posterURL_Large] = Proxy.Preview(HTTP.Request(posterURL_Large), sort_order=2)
+			try:
+				if(posterURL_Large <>''):
+					metadata.posters[posterURL_Large] = Proxy.Preview(HTTP.Request(posterURL_Large, timeout=int(Prefs['timeout'])), sort_order=2)
 			except:	Log(' Can not load Large Poster')
 			Log('=======  Poster Info end =========')
 		except:
@@ -1010,12 +1085,16 @@ class redstar_javscraper(Agent.Movies):
 			Log('=======  Background Info start =========')
 			nBgackgroundimg=Extract_imgurl(searchResults, '<div id="sample-waterfall">', '<div class="clearfix','href')
 			j = len(nBgackgroundimg)
+			imgcnt = int(Prefs['img_cnt'])
+			if (imgcnt <= j): j = imgcnt
+			Log('Image count: ')
 			if (j <> -1):
 				for i in range(0, j):
 					bgimg = nBgackgroundimg[i]
 					try:
-						metadata.art[bgimg] = Proxy.Preview(
-							HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}).content, sort_order=i + 1)
+						if(bgimg <>''):
+							metadata.art[bgimg] = Proxy.Preview(
+							HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order=i + 1)
 					except:
 						Log('@@@' + bgimg + ' Can not load')
 			Log('=======  Background Info end =========')
@@ -1068,7 +1147,7 @@ class redstar_javscraper(Agent.Movies):
 
 		return 1
 
-	def pornav_update(self, metadata, media, lang):
+	def pornav_update(self, metadata, media, lang, nOrgID):
 
 		# nIDs[0]: 검색용 품번  nIDs[1]: 검색된 사이트(DMM, R18)   nIDs[2]: 아마추어(C)or일반(A)  nIDs[3]: 오리지널 품번(OAE-101)
 		Log('****** 미디어 업데이트(상세항목) 시작 / pornav Media Update Start *******')
@@ -1089,15 +1168,15 @@ class redstar_javscraper(Agent.Movies):
 		elif (nMediaName.find('TOKYO') > -1):
 			release_id = nMediaName.replace('TOKYOHOT-', '')  # 검색을 위해 품번만 발췌함
 		else:
-			release_id = org_id
+			release_id = nOrgID.replace('[','').replace(']','')
 		try:
 
-			searchResults = HTTP.Request(SEARCH_URL + release_id).content  # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
+			searchResults = HTTP.Request(SEARCH_URL + release_id, timeout=int(Prefs['timeout'])).content  # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
 		except:
 			return 0
 		content_id = String_slice(searchResults, '<a itemprop="url" href="', '"')
 		try:
-			searchResults = HTTP.Request(DETAIL_URL + content_id , headers = {'Referer': 'http://www.google.com'}).content
+			searchResults = HTTP.Request(DETAIL_URL + content_id , headers = {'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content
 			nResult = searchResults.find('<div class="container content"')  # 검색결과 확인
 			if (nResult == -1):
 				Log('@@@ Update content search result failed1')
@@ -1111,13 +1190,11 @@ class redstar_javscraper(Agent.Movies):
 			Log('@@@ Update content search result failed2')
 			return 0
 		# Log(searchResults)
-		id=String_slice(media.title,'[',']').upper()
+		id= String_slice(media.title,'[',']').upper()
 		nTitle = String_slice(searchResults, 'alt="', '"').replace(id,'').upper()
 		nTitle = nTitle.replace('FC2 PPV ', '')
-		nTitle = nTitle.replace(release_id.upper()
-								, '')
+		nTitle = nTitle.replace(release_id.upper(), '')
 		nTitle = nTitle.replace('TOKYO HOT','')
-
 		nTitle_Trans = Papago_Trans(nTitle, 'ja')
 		Log(' title : ' + nTitle)
 		Log(' title_ko: ' + nTitle_Trans)
@@ -1207,6 +1284,7 @@ class redstar_javscraper(Agent.Movies):
 			for i in range(0, j):
 				role = metadata.roles.new()
 				if (nGenreName_arr[i] == '' or nGenreName_arr[i] <> ' '):
+					nGenreName_arr[i] = nGenreName_arr[i].replace('.', '')
 					nGenreName_ko = Papago_Trans(nGenreName_arr[i], 'ja')
 					# Log(nGenreName[i])
 					# Log(nGenreName_ko)
@@ -1243,7 +1321,9 @@ class redstar_javscraper(Agent.Movies):
 		try:
 			posterURL_Small = String_slice(searchResults, '<img itemprop="image" src="', '"')
 			Log("small Poster URL / 포스터 주소 : " + posterURL_Small)
-			try:metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small), sort_order=1)
+			try:
+				if(posterURL_Small <>''):
+					metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small, timeout=int(Prefs['timeout'])), sort_order=1)
 			except:	Log(' Can not load Small Poster')
 			Log('=======  Poster Info end =========')
 		except:
@@ -1254,12 +1334,16 @@ class redstar_javscraper(Agent.Movies):
 			Log('=======  Background Info start =========')
 			nBgackgroundimg=Extract_imgurl(searchResults, 'preview-images">', '<div class','data-original')
 			j = len(nBgackgroundimg)
+			imgcnt = int(Prefs['img_cnt'])
+			if (imgcnt <= j): j = imgcnt
+			Log('Image count: ')
 			if (j <> -1):
 				for i in range(0, j):
 					bgimg = nBgackgroundimg[i]
 					try:
-						metadata.art[bgimg] = Proxy.Preview(
-							HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}).content, sort_order=i + 1)
+						if(bgimg <>''):
+							metadata.art[bgimg] = Proxy.Preview(
+							HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order=i + 1)
 					except:
 						Log('@@@' + bgimg + ' Can not load')
 			Log('=======  Background Info end =========')
