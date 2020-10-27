@@ -55,6 +55,12 @@
 		"default": "true"
 	},
 	{
+		"id": "javdb_use",
+		"label": "javdb.com 검색여부(Default 사용)",
+		"type": "bool",
+		"default": "true"
+	},
+	{
 		"id": "searchsiteinfo",
 		"label": "일치된 컨텐츠 검색 사이트 정보를 '요약'에 추가",
 		"type": "bool",

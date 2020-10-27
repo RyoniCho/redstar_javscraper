@@ -17,6 +17,14 @@ HDR = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML,
        'Accept-Language': 'en-US,en;q=0.8',
        'Connection': 'keep-alive'}
 
+HDR_javdb = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36',
+       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+       'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+       'Accept-Encoding': 'none',
+       'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8',
+		'referer': 'www.google.com',
+       'Connection': 'keep-alive'}
+
 def Papago_Trans(txt,lang='en'):
 	# 번역언어:	# ko	한국어	# en	영어	# ja	일본어	# zh-CN	중국어 간체	# zh-TW	중국어 번체	# vi	베트남어
 	# id	인도네시아어	# th	태국어	# de	독일어	# ru	러시아어	# es	스페인어	# it	이탈리아어	# fr	프랑스어
@@ -147,7 +155,8 @@ def Extract_imgurl(nStr,nStartstr,nEndstr,hreforsrc='src'):
 			for i in range(1, j):
 				# Log('Before Cut: ' + sTemp[i])
 				nCut=String_slice(sTemp[i],'="','"')
-				nResult.append(nCut)
+				if (nCut.find('preview-video') == -1 ):
+					nResult.append(nCut)
 				Log('Extract_url  After Cut: ' + nCut)
 			return nResult
 	return #Return 결과는 None
@@ -260,8 +269,10 @@ def poombun_check(txt):
 	Log('### Poombun input: ' + txt)
 	if (txt <> ''):
 		txt = txt.replace(' ', '-')
+		# Log('txt: ' + txt)
 		pattern = '(?i)(tokyo.*)-n[0-9]{3,}|((carib.*)|(1pondo.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}'
-		nMatch = re.match(pattern, txt)
+		nMatch = re.search(pattern, txt)
+		# Log(nMatch)
 		if (nMatch is not None):
 			Log('### Poombun output: ' + nMatch.group(0))
 			return nMatch.group(0)
@@ -270,6 +281,8 @@ def poombun_check(txt):
 
 def uncensored_check(txt):
 	# 파일명에 노모 포함인지 여부 확인
+
+	if (txt is None): return 0
 	txt=txt.upper()
 	txt=urllib.unquote(txt).decode('utf8')
 	Log('Uncensored check txt: ' + txt	)
@@ -305,6 +318,7 @@ class redstar_javscraper(Agent.Movies):
 		#https://javdb.com/
 		# https://pornav.co/  fc2등 노모 검색
 		# https://www.jav321.com/
+		# https://aa9969.com/ko/ #7mmtv
 
 		nResult=0
 		Log("####### Start search #########")
@@ -312,6 +326,7 @@ class redstar_javscraper(Agent.Movies):
 		Log('option check r18: ' + str(Prefs['r18_use']))
 		Log('option check javbus: ' + str(Prefs['javbus_use']))
 		Log('option check pornav: ' + str(Prefs['pornav_use']))
+		Log('option check javdb: ' + str(Prefs['javdb_use']))
 
 		media.name=poombun_check(media.name).replace(' ','-').upper()
 
@@ -327,6 +342,9 @@ class redstar_javscraper(Agent.Movies):
 		if (str(Prefs['pornav_use']) == 'True' and nResult == 0):
 			nResult=self.pornav_search(results, media, lang)
 			# Log('pornav result: '  + str(nResult))
+		if (str(Prefs['javdb_use']) == 'True' and nResult == 0):
+			nResult=self.javdb_search(results, media, lang)
+			# Log('javdb result: '  + str(nResult))
 		if (nResult == 0):
 			Log('xxx Search failed on all sites. xxx')
 		Log('search end')
@@ -365,6 +383,9 @@ class redstar_javscraper(Agent.Movies):
 		elif (str(Prefs['pornav_use']) == 'True' and ((nSite == 'pornav')or (nSite == ' '))):
 			nResult=self.pornav_update(metadata, media, lang, nOrgID)
 			Log('pornav result: ' + str(nResult))
+		elif (str(Prefs['javdb_use']) == 'True' and ((nSite == 'javdb')or (nSite == ' '))):
+			nResult=self.javdb_update(metadata, media, lang, nOrgID)
+			Log('javdb result: ' + str(nResult))
 		Log("####### End update #########")
 
 	def dmm_search(self,results,media,lang):
@@ -376,10 +397,13 @@ class redstar_javscraper(Agent.Movies):
 
 		org_id = media.name
 		if (org_id == ''): return 0
-		release_id=org_id.replace('-','00')
+		if (org_id.find('DV-') > -1):
+			release_id = org_id.replace('-', '0')
+		else:
+			release_id=org_id.replace('-','00')
 
 		Log('******* DMM Video 검색 시작(Media search start) ****** ')
-		Log("Release ID:    " + str(release_id) + ' org_id: ' + str(org_id))  # Release ID: IPZ00929 org_id: IPZ-929
+		Log("### Release ID:    " + str(release_id) + ' org_id: ' + str(org_id))  # Release ID: IPZ00929 org_id: IPZ-929
 		searchResults = Get_search_url(SEARCH_URL, release_id)
 		if (searchResults <> ''):
 			nResult = searchResults.find('<ul id="list">') #검색결과 없음
@@ -563,15 +587,6 @@ class redstar_javscraper(Agent.Movies):
 			Log( 'pornav search exception')
 			return 0
 
-
-
-
-
-
-
-
-
-
 		Log(searchResults)
 		if (searchResults <> ''):
 			nResult = searchResults.find('<div id="grid-container')  # 검색결과 확인
@@ -602,13 +617,60 @@ class redstar_javscraper(Agent.Movies):
 		Log('pornav result Not found')
 		return 0
 
+	def javdb_search(self,results,media,lang):
+		##############################
+		###### javdb video 검색  ######
+		##############################
+		Log('##### Start javdb video search #####')
+		SEARCH_URL = 'https://javdb.com/search?q='
+
+		org_id = media.name
+		if (org_id == ''): return 0
+		release_id=org_id.replace(' ','-')
+
+		Log('******* javdb Video 검색 시작(Media search start) ****** ')
+		Log("### Release ID:    " + str(release_id) + ' org_id: ' + str(org_id))  # Release ID: IPZ00929 org_id: IPZ-929
+		# searchResults = Get_search_url(SEARCH_URL + '&f=all', release_id)
+
+		try:
+			searchResults = HTTP.Request(SEARCH_URL + release_id + '&f=all').content
+		except:
+			Log( 'javdb search exception')
+			return 0
+		if (searchResults <> ''):
+			nResult = searchResults.find('div class="empty-message"') #검색결과 없음
+			# Log(searchResults)
+			# Log(nResult)
+			if (nResult == -1):
+				Log('##### javdb Video Result Found #####')
+				if (uncensored_check(media.filename) == 1):
+					uncResult = 'U'
+				else:
+					uncResult = 'C'
+				Log('### UNC:' + uncResult)
+				searchResults=String_slice(searchResults,'videos video-container','</section>')
+				content_id = String_slice(searchResults, 'a href="','"').replace('/v/','')
+				Log(' Content_id: ' + content_id)
+				title = String_slice(searchResults, 'video-title">', '<')
+				id= org_id
+				name= '[' + id + ']§' + title + '§' + 'javdb' + '§' + uncResult
+				score=100
+				results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
+				Log('##Search Update Result ==> id: ' + content_id + ' name: ' + name + ' score : ' + str(score))
+				return 1
+			else:
+				Log('javdb Video result Not found')
+		else:
+			Log('javdb Video result not found1')
+		return 0
+
 	def dmm_update(self, metadata, media, lang, nOrgID):
 
 		################################################
 		################## DMM update ##################
 		################################################
 		if (nOrgID.find('[') <> -1 ):
-			org_id=nOrgID
+			org_id=poombun_check(nOrgID)
 		else:
 			org_id=metadata.id.replace('00','-')
 
@@ -637,9 +699,10 @@ class redstar_javscraper(Agent.Movies):
 		Log(' title : ' + nTitle + ' title_ko: ' + nTitle_Trans)
 
 		# 제목
-		metadata.title = id + " " + nTitle_Trans
+		metadata.title = '[' + id + "] " + nTitle_Trans
 		metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 		metadata.original_title = nTitle
+		Log('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title)
 
 		# 스튜디오
 		sTemp = String_slice(searchResults, 'メーカー：', '</tr>') # 스튜디오 정보
@@ -699,8 +762,8 @@ class redstar_javscraper(Agent.Movies):
 		j=len(nGenreName)
 		for i in range(0,j):
 			role = metadata.roles.new()
-			nGenreName[i]=nGenreName[i].replace('.','')
-			nGenreName_ko=Papago_Trans(nGenreName[i],'ja')
+			# nGenreName[i]=nGenreName[i].replace('.','')
+			nGenreName_ko=Papago_Trans(nGenreName[i],'ja').replace('.','')
 			# Log(nGenreName[i])
 			# Log(nGenreName_ko)
 			metadata.genres.add(nGenreName_ko)
@@ -796,7 +859,7 @@ class redstar_javscraper(Agent.Movies):
 		DETAIL_URL = 'https://www.r18.com/videos/vod/movies/detail/-/id='
 		DETAIL_URL2 = 'https://www.r18.com/videos/vod/amateur/detail/-/id='
 
-		org_id = nOrgID
+		org_id = poombun_check(nOrgID)
 
 		#일반 검색에서 안나올 경우 아마추어 URL로 다시 확인함
 		try:
@@ -813,7 +876,7 @@ class redstar_javscraper(Agent.Movies):
 		id = org_id.upper()
 		nTitle=detailItem(root,'//cite[@itemprop="name"]')
 		nTitle_Trans=Papago_Trans(nTitle)
-		metadata.title= id + " " + nTitle_Trans
+		metadata.title= '[' + id + '] ' + nTitle_Trans
 		metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 		metadata.original_title = nTitle
 		metadata.studio = detailItem(root,'//dd[@itemprop="productionCompany"]//a') # 스튜디오 정보
@@ -840,7 +903,8 @@ class redstar_javscraper(Agent.Movies):
 		metadata.originally_available_at = date_object
 		metadata.year = metadata.originally_available_at.year
 
-		# 장르
+		#
+
 		metadata.genres.clear()
 		categories = root.xpath('//div[contains(@class, "product-categories-list")]//div//a')
 		for category in categories:
@@ -932,7 +996,7 @@ class redstar_javscraper(Agent.Movies):
 		Log('### 검색 사이트: javbus 일반 영상 / UpdateSite: javbus Video ###')
 		DETAIL_URL = 'https://www.javbus.com/'
 
-		org_id=nOrgID
+		org_id=poombun_check(nOrgID)
 
 		try:
 			searchResults = HTTP.Request(DETAIL_URL + metadata.id , headers = {'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content
@@ -959,7 +1023,7 @@ class redstar_javscraper(Agent.Movies):
 		# 제목
 		try:
 			Log('=======  title Info start =========')
-			metadata.title = id + " " + nTitle_Trans
+			metadata.title = '[' + id + '] ' + nTitle_Trans
 			metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
 			metadata.original_title = nTitle
 			Log('=======  title Info end =========')
@@ -1026,8 +1090,8 @@ class redstar_javscraper(Agent.Movies):
 			j = len(nGenreName)
 			for i in range(0, j):
 				role = metadata.roles.new()
-				nGenreName[i] = nGenreName[i].replace('.', '')
-				nGenreName_ko = Papago_Trans(nGenreName[i], 'ja')
+				# nGenreName[i] = nGenreName[i].replace('.', '')
+				nGenreName_ko = Papago_Trans(nGenreName[i], 'ja').replace('.','')
 				# Log(nGenreName[i])
 				# Log(nGenreName_ko)
 				metadata.genres.add(nGenreName_ko)
@@ -1152,7 +1216,6 @@ class redstar_javscraper(Agent.Movies):
 		# nIDs[0]: 검색용 품번  nIDs[1]: 검색된 사이트(DMM, R18)   nIDs[2]: 아마추어(C)or일반(A)  nIDs[3]: 오리지널 품번(OAE-101)
 		Log('****** 미디어 업데이트(상세항목) 시작 / pornav Media Update Start *******')
 		# Log("Update ID:   " + str(metadata.id) +  ' Original ID: ' + org_id)
-
 		# id: /jp/article-179279/N0836-Saionji-Reo-vs-TOKYO-HOT-Devil-Kang
 
 		################################################
@@ -1168,9 +1231,8 @@ class redstar_javscraper(Agent.Movies):
 		elif (nMediaName.find('TOKYO') > -1):
 			release_id = nMediaName.replace('TOKYOHOT-', '')  # 검색을 위해 품번만 발췌함
 		else:
-			release_id = nOrgID.replace('[','').replace(']','')
+			release_id = poombun_check(nOrgID) #.replace('[','').replace(']','')
 		try:
-
 			searchResults = HTTP.Request(SEARCH_URL + release_id, timeout=int(Prefs['timeout'])).content  # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
 		except:
 			return 0
@@ -1284,8 +1346,8 @@ class redstar_javscraper(Agent.Movies):
 			for i in range(0, j):
 				role = metadata.roles.new()
 				if (nGenreName_arr[i] == '' or nGenreName_arr[i] <> ' '):
-					nGenreName_arr[i] = nGenreName_arr[i].replace('.', '')
-					nGenreName_ko = Papago_Trans(nGenreName_arr[i], 'ja')
+					# nGenreName_arr[i] = nGenreName_arr[i].replace('.', '')
+					nGenreName_ko = Papago_Trans(nGenreName_arr[i], 'ja').replace('.','')
 					# Log(nGenreName[i])
 					# Log(nGenreName_ko)
 					metadata.genres.add(nGenreName_ko)
@@ -1389,6 +1451,222 @@ class redstar_javscraper(Agent.Movies):
 				Log('### series 컬렉션 생성 안함(설정 미체크) Series connection not create(prefrence not check ###')
 
 			Log('******* pornav 미디어 업데이트 완료/Media Update completed ****** ')
+		except:
+			Log('@@@ Series collection failed')
+
+		return 1
+
+	def javdb_update(self, metadata, media, lang, nOrgID):
+
+		# nIDs[0]: 검색용 품번  nIDs[1]: 검색된 사이트(DMM, R18)   nIDs[2]: 아마추어(C)or일반(A)  nIDs[3]: 오리지널 품번(OAE-101)
+		Log('****** 미디어 업데이트(상세항목) 시작 / javdb Media Update Start *******')
+		# Log("Update ID:   " + str(metadata.id) +  ' Original ID: ' + org_id)
+
+		################################################
+		################# javdb update #################
+		################################################
+		Log('### 검색 사이트: javdb 일반 영상 / UpdateSite: javdb Video ###')
+		DETAIL_URL = 'https://javdb.com/v/'
+
+		org_id=poombun_check(nOrgID)
+
+		try:
+			searchResults = HTTP.Request(DETAIL_URL + metadata.id , headers = {'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content
+		except:
+			Log('@@@ Update content load failed')
+			return 0
+
+		# Log(searchResults)
+		nResult = searchResults.find('頁面未找到 (404)')  # 검색결과 확인
+		if (nResult <> -1):
+			Log('@@@ Update content search result failed1')
+			return 0
+		searchResults = String_slice(searchResults, 'title is-4', '</article>')
+		if (searchResults == ''):
+			Log('@@@ Update content search result failed2')
+			return 0
+		# Log(searchResults)
+		id = org_id.upper()
+		nTitle = String_slice(searchResults, '<strong>', '<').replace(id,'')
+		nTitle_Trans = Papago_Trans(nTitle, 'ja')
+		Log(' title : ' + nTitle)
+		Log(' title_ko: ' + nTitle_Trans)
+
+		# 제목
+		try:
+			Log('=======  title Info start =========')
+			metadata.title = '[' + id + '] ' + nTitle_Trans
+			metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
+			metadata.original_title = nTitle
+			Log('=======  title Info end =========')
+		except:
+			Log('@@@ Title failed')
+
+		# 스튜디오=> 제조사
+		try:
+			Log('=======  Studio Info start =========')
+			sTemp = String_slice(searchResults, '片商', '</div>')
+			sTemp = String_slice(sTemp, 'a href', '</span>')
+			metadata.studio = String_slice(sTemp, '">', '</a')
+			metadata.studio = Papago_Trans(str(metadata.studio), 'ja')
+			Log('Studio: ' + str(metadata.studio))
+			Log('=======  Studio Info end =========')
+		except:
+			Log('@@@ Studio failed')
+
+		# 감독
+		try:
+			Log('=======  Director Info start =========')
+			# sTemp = String_slice(searchResults, '導演', '<p>')
+			director_info = Extract_str(searchResults, '導演', '</div>')
+			if (director_info is not None):
+				director_info_ko = Papago_Trans(director_info[0], 'ja')
+				Log('Director: ' + director_info_ko)
+				metadata.directors.clear()
+				try:
+					meta_director = metadata.directors.new()
+					meta_director.name = director_info_ko
+				except:
+					try:
+						metadata.directors.add(director_info_ko)
+					except:
+						pass
+			Log('=======  Director Info end =========')
+		except:
+			Log('@@@ Director failed')
+
+		# 일자 표시(미리보기, 원출처) 제품발매일:商品発売日 전달개시일:配信開始日
+		try:
+			Log('=======  Date Info start =========')
+			if (searchResults.find('日期') <> -1):
+				nYear = String_slice(searchResults, '日期', '</div>')
+				nYear = String_slice(nYear, 'value">', '<')
+				nYearArray = nYear.split('-')
+				# 미리보기 항목의 이미지 아래 표시되는 년도
+				metadata.year = int(nYearArray[0])
+				# 상세항목의 '원출처' 일자
+				metadata.originally_available_at = datetime.strptime(nYear, '%Y-%m-%d')
+			Log('=======  Date Info start =========')
+		except:
+			Log('@@@ Date Failed')
+
+		# 줄거리(javdb는 줄거리 없음)
+		if (str(Prefs['searchsiteinfo']) == 'True'): metadata.summary = '[javdb]'
+
+		# 국가
+		metadata.countries.clear()
+		metadata.countries.add(Papago_Trans('Japan').replace('.',''))
+
+		# 장르
+		try:
+			Log('=======  Genre Info start =========')
+			metadata.roles.clear()
+			nGenreName = Extract_str(searchResults, '類別', '</div>')
+			j = len(nGenreName)
+			for i in range(0, j):
+				role = metadata.roles.new()
+				# nGenreName[i] = nGenreName[i].replace('.', '')
+				nGenreName_ko = Papago_Trans(nGenreName[i], 'ja').replace('.','')
+				Log(nGenreName[i])
+				Log(nGenreName_ko)
+				metadata.genres.add(nGenreName_ko)
+			Log('=======  Genre Info end =========')
+		except:
+			Log('@@@ Genre failed')
+
+		# 배우정보
+		Log('=======  Actor Info end =========')
+		metadata.roles.clear()
+		nActorName=Extract_str(searchResults,'演員', '</div>')
+		# Log('===================')
+		Log(nActorName)
+		if (nActorName is not None):
+			j=len(nActorName)
+			for i in range(0,j):
+				role = metadata.roles.new()
+				# if (nActorName[i].find('(') > -1): nActorName = nActorName[i][0:nActorName[i].find('(')]
+				nTemp=nActorName[i]
+				if (nTemp.find('(') <> -1) : nTemp=nTemp[0:nTemp.find('(')]
+				nActorInfo = Get_actor_info(nTemp)
+				role.photo = nActorInfo[0]
+				role.name = nActorInfo[1]
+		Log('=======  Actor Info end =========')
+
+		# Posters
+		Log('=======  Poster Info start =========')
+		try:
+			posterURL_Small = String_slice(searchResults, 'gallery" href="', '"')
+			Log("small Poster URL / 포스터 주소 : " + posterURL_Small)
+			try:
+				if(posterURL_Small <>'' or posterURL_Small <> '#preview-video'):
+					metadata.posters[posterURL_Small] = Proxy.Preview(HTTP.Request(posterURL_Small, timeout=int(Prefs['timeout'])), sort_order=1)
+			except:	Log(' Can not load Small Poster')
+			Log('=======  Poster Info end =========')
+		except:
+			Log('@@@ Poster Failed')
+
+		#background images
+		try:
+			Log('=======  Background Info start =========')
+			nBgackgroundimg=Extract_imgurl(searchResults, 'tile-images preview-images', '</article>','href')
+			j = len(nBgackgroundimg)
+			imgcnt = int(Prefs['img_cnt'])
+			if (imgcnt <= j): j = imgcnt
+			Log('Image count: ')
+			if (j <> -1):
+				for i in range(0, j):
+					bgimg = nBgackgroundimg[i]
+					try:
+						if(bgimg <>''):
+							metadata.art[bgimg] = Proxy.Preview(
+							HTTP.Request(bgimg, headers={'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content, sort_order=i + 1)
+					except:
+						Log('@@@' + bgimg + ' Can not load')
+			Log('=======  Background Info end =========')
+		except:
+			Log('@@@ Background Image failed')
+
+		# Series 정보(plex에는 seires 항목이 없으므로 '주제' 항목에 이 값을 넣음)
+		try:
+			Log('=======  Series Info start =========')
+			# Log('######## series info')
+			# Log(sTemp)
+			series_info = Extract_str(searchResults, '系列', '</div>')
+			Log(series_info)
+			# Log('SeriesInfo: ' + series_info)
+			if (series_info is not None):
+				if (series_info[0] <> '----'):
+					series_info_ko = Papago_Trans(series_info[0], 'ja')
+					Log(series_info_ko)
+					metadata.tagline = series_info_ko
+			else:
+				Log('Series info not found')
+			Log('=======  Series Info end =========')
+		except:
+			Log('@@@ Series failed')
+
+		# studio 컬렉션 생성
+		try:
+			if (str(Prefs['create_collection_studio']) == 'True'):
+				if metadata.studio != None:
+					metadata.collections.add(metadata.studio)
+					Log(' metadata.collections studio: ' + str(metadata.studio))
+			else:
+				Log('### Studio 컬렉션 생성 안함(설정 미체크) / Studio connection not create(prefrence not check ###')
+		except:
+			Log('@@@ Studio collection failed')
+
+		# series 컬렉션 생성
+		try:
+			if (str(Prefs['create_collection_series']) == 'True'):
+				if metadata.tagline != None:
+					metadata.collections.add(metadata.tagline)
+					Log(' metadata.collections series: ' + str(metadata.tagline))
+			else:
+				Log('### series 컬렉션 생성 안함(설정 미체크) Series connection not create(prefrence not check ###')
+
+			Log('******* javdb 미디어 업데이트 완료/Media Update completed ****** ')
+
 		except:
 			Log('@@@ Series collection failed')
 
