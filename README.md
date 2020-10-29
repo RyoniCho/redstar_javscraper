@@ -23,7 +23,8 @@ discX
 diskX
 dvdX
 partX
-ptX```
+ptX
+```
   ex.) SSNI-100.cd1.mp4, SSNI-100.cd2.mp4
 
 # 1. 설치방법
