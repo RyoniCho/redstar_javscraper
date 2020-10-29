@@ -7,6 +7,24 @@ PLEX용 Japan Adule Video Metadata scraper입니다.
 2. r18.com
 3. javbus.com
 4. pornav.co
+5. javdb.com
+
+# 파일명 규칙
+ - 품번[추가정보1][추가정보2]제목.mp4
+ - ex.) OAE-101 [미카미유아] 올 누드 미카미유아.mp4
+ - ex.) FC2PPV-100000.mp4
+ - ex.) TOKYOHOT-1234.mp4
+ - ex.) CARIB-1000-222.mp4
+
+ - 시리즈의 경우 Plex 기본 파일명 규칙과 동일
+ - 이 경우 하나의 항목으로 묶이며 연속 재생됨(단, 바로 2번으로 갈 수 없음)
+'''cdX
+discX
+diskX
+dvdX
+partX
+ptX'''
+ - ex.) SSNI-100.cd1.mp4, SSNI-100.cd2.mp4
 
 # 1. 설치방법
 ## A. 파일 복사
@@ -90,12 +108,24 @@ https://github.com/redstar-javscraper/redstar_javscraper 여기서 issue 탭에 
 - 다운받은 파일에 다음의 규칙을 추가합니다.(중간 아무 라인에나 추가)
 - 이 설정은 아래 주소로 접근할때만 VPN을 사용하도록 하는 설정으로 시놀로지가 토렌트 등 내부에서 인터넷에 접속할 때에는 인터넷을 직접 사용하고 아래 주소만 VPN을 사용하도록 하는 설정입니다.
 
-```route 13.248.196.236 255.255.255.255 vpn_gateway #dmm.co.jp
-route 202.6.0.0 255.255.0.0 vpn_gateway #dmm image url
-route 104.18.63.228 255.255.255.255 vpn_gateway #javlibrary.com
-route 104.24.112.198 255.255.255.255 vpn_gateway #jav321.com
-route 104.27.170.215 255.255.255.255 vpn_gateway #pornav.co
-route 172.67.130.224 255.255.255.255 vpn_gateway #javdb.com
+```# Additional static routes
+#dmm.co.jp
+route 13.248.196.236 255.255.255.255 vpn_gateway
+#dmm image url
+route 202.6.0.0 255.255.0.0 vpn_gateway
+#javbus.com
+route 104.25.0.0 255.255.0.0 vpn_gateway
+#javlibrary.com
+route 104.18.0.0 255.255.0.0 vpn_gateway
+route 172.67.0.0 255.255.0.0 vpn_gateway
+#jav321.com
+route 104.24.0.0 255.255.0.0 vpn_gateway
+#pornav.co
+route 104.27.0.0 255.255.0.0 vpn_gateway
+route 172.67.0.0 255.255.0.0 vpn_gateway
+#javdb.com
+route 104.28.20.46 255.255.255.255 vpn_gateway
+route 172.67.130.224 255.255.255.255 vpn_gateway
 route-nopull
 ```
 
