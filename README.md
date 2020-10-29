@@ -9,27 +9,6 @@ PLEX용 Japan Adule Video Metadata scraper입니다.
 4. pornav.co
 5. javdb.com
 
-# 파일명 규칙
- - 품번[추가정보1][추가정보2]제목.mp4
-  ```ex.) OAE-101 [미카미유아] 올 누드 미카미유아.mp4
-  ex.) FC2PPV-100000.mp4
-  ex.) TOKYOHOT-1234.mp4
-  ex.) CARIB-1000-222.mp4
-```
-
- - 시리즈의 경우 Plex 기본 파일명 규칙과 동일
- - 이 경우 하나의 항목으로 묶이며 연속 재생됨(단, 바로 2번으로 갈 수 없음)
-```cdX
-discX
-diskX
-dvdX
-partX
-ptX
-```
-```
-  ex.) SSNI-100.cd1.mp4, SSNI-100.cd2.mp4
-```
-
 # 1. 설치방법
 ## A. 파일 복사
 - PLEX Media Server\Plug-ins 경로에 redstar_javscraper.bundle 폴더로 복사 및 압축해제
@@ -149,6 +128,26 @@ route-nopull
 # 3. 파일명 규칙
 ## 1. 품번은 하이픈(-)을 기준으로 구분함
 ## 2. xxx-999 형식으로 통일
+
+ - 품번[추가정보1][추가정보2]제목.mp4
+  ```ex.) OAE-101 [미카미유아] 올 누드 미카미유아.mp4
+  ex.) FC2PPV-100000.mp4
+  ex.) TOKYOHOT-1234.mp4
+  ex.) CARIB-1000-222.mp4
+```
+
+ - 시리즈의 경우 Plex 기본 파일명 규칙과 동일
+ - 이 경우 하나의 항목으로 묶이며 연속 재생됨(단, 바로 2번으로 갈 수 없음)
+```cdX
+discX
+diskX
+dvdX
+partX
+ptX
+```
+```
+  ex.) SSNI-100.cd1.mp4, SSNI-100.cd2.mp4
+```
 
 ### 분류가능 예시 
 - IPX-999
