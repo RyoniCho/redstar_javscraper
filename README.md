@@ -11,10 +11,11 @@ PLEX용 Japan Adule Video Metadata scraper입니다.
 
 # 파일명 규칙
  - 품번[추가정보1][추가정보2]제목.mp4
-  ex.) OAE-101 [미카미유아] 올 누드 미카미유아.mp4
+  ```ex.) OAE-101 [미카미유아] 올 누드 미카미유아.mp4
   ex.) FC2PPV-100000.mp4
   ex.) TOKYOHOT-1234.mp4
   ex.) CARIB-1000-222.mp4
+```
 
  - 시리즈의 경우 Plex 기본 파일명 규칙과 동일
  - 이 경우 하나의 항목으로 묶이며 연속 재생됨(단, 바로 2번으로 갈 수 없음)
@@ -25,7 +26,9 @@ dvdX
 partX
 ptX
 ```
+```
   ex.) SSNI-100.cd1.mp4, SSNI-100.cd2.mp4
+```
 
 # 1. 설치방법
 ## A. 파일 복사
