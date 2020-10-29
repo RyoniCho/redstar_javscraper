@@ -53,6 +53,7 @@ PLEX용 Japan Adule Video Metadata scraper입니다.
 - Series로 컬렉션 만들기: 검색된 미디어의 Series로 컬렉션 생성
 <center><img src="/img/1-1.png" width="600"></center>
 <center><img src="/img/1-2.png" width="600"></center>
+<center><img src="/img/1-3.png" width="600"></center>
 
 ## E. 라이브러리 추가
 
