@@ -9,6 +9,7 @@ import ssl
 from datetime import datetime
 from cStringIO import StringIO
 import inspect
+import os
 # import certifi
 # import urllib3
 
@@ -154,7 +155,7 @@ def Extract_imgurl(nStr,nStartstr,nEndstr,hreforsrc='src'):
             Logging('Length: ','Debug')
             Logging(int(j),'Debug')
             for i in range(1, j):
-                Logging('Before Cut: ' + sTemp[i],'Debug')
+                # Logging('Before Cut: ' + sTemp[i],'Debug')
                 nCut=String_slice(sTemp[i],'="','"')
                 if (nCut.find('preview-video') == -1 ):
                     nResult.append(nCut)
@@ -236,7 +237,7 @@ def Get_search_url(SEARCH_URL, txt, reqMode='GET'):
         Logging("검색결과 Search Result: exception", 'Error')
     return ''
 
-def poombun_check(txt):
+def poombun_check(txt,filename):
     # 입력 문자에서 품번만 추출해 리턴함
     # (?i) 대소문자포함
     #  \w{2,}-[0-9]{3,}  xxx-yyy 품번 구분
@@ -246,18 +247,28 @@ def poombun_check(txt):
 
     # (?i)(tokyo.*)-n[0-9]{3,} / tokyohot-n000
     # (?i)((carib.*)|(1pondo.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}
-
     # (?i)(tokyo.*)-n[0-9]{3,}|((carib.*)|(1pondo.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,} 위 두개를 합친 표현식
+
     Logging('### Poombun input: ' + txt,'Debug')
     if (txt <> ''):
         txt = txt.replace(' ', '-')
         # Logging('txt: ' + txt)
-        pattern = '(?i)(tokyo.*)-n[0-9]{3,}|((carib.*)|(1pondo.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}'
+        pattern = '(?i)(TOKYO.*)-n[0-9]{3,}|((CARIB.*)|(1PONDO.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}'
         nMatch = re.search(pattern, txt)
         # Logging(nMatch)
         if (nMatch is not None):
             Logging('### Poombun output: ' + nMatch.group(0), 'Debug')
             return nMatch.group(0)
+        elif (filename != ''):
+            Logging('품번 파일명은 있으나 형식이 안맞음. 파일명: ' + txt, 'Debug')
+            txt = urllib.unquote(filename).decode('utf8')
+            Logging('입력받은 파일명 주소: ' + txt, 'Debug')
+            # if(txt.find('DV-') > -1):
+            nMatch = re.search(pattern, txt)
+            if (nMatch is not None):
+                Logging('### Poombun output: ' + nMatch.group(0), 'Debug')
+                return nMatch.group(0)
+
     Logging('@@@ Poombun is wrong','Error')
     return txt
 
@@ -273,7 +284,7 @@ def poombun_split_num(txt):
     elif (nMediaName.find('CARIBBEANCOM-') > -1):
         txt = nMediaName.replace('CARIBBEANCOM-', '')  # 검색을 위해 품번만 발췌함
     else:
-        txt = poombun_check(txt)  # .replace('[','').replace(']','')
+        txt = poombun_check(txt,'')  # .replace('[','').replace(']','')
 
     Logging('poombunSplitResult: ' + txt,'Debug')
     return txt
@@ -309,40 +320,14 @@ class redstar_javscraper(Agent.Movies):
     primary_provider = True
     accepts_from = ['com.plexapp.agents.localmedia']
 
-    def get_title(self, media, title):
-        # 파일명을 타이틀로 그대로 사용할 경우 사용하는 함수
-        ret = []
-        Logging('### get_title 함수 시작 ### 미디어명:'+media.name + ' Title: ' + title,'Debug')
-        Logging('str(Prefs["filenametotitle"]) 상태: ' +str(Prefs['filenametotitle']),'Debug')
-        if (Prefs['filenametotitle'] == True):
-            Logging(' filenametotitle 옵션 사용으로 설정됨','Debug')
-            medianame = poombun_check(media.name).replace('-', ' ') #제목행에서 품번만 발췌함
-            filetitle = media.name.replace(medianame, '').strip() # 제목행에서 품번 및 앞뒤 공백제거
-            Logging(' medianame: ' + medianame + ' Striped filetitle: ' + filetitle,'Debug')
-            if (filetitle == ''):
-                Logging('파일명 타이틀을 제목으로 사용함(제목 비었음): ' + filetitle, 'Debug')
-                ret.append(title)
-                ret.append('N')
-            else:
-                Logging('파일명 타이틀을 제목으로 사용함(제목 있음): ' + filetitle, 'Debug')
-                ret.append(filetitle)
-                ret.append('Y')
-        else:
-            Logging('웹 크롤링된 제목을 사용함: ' + title,'Debug')
-            ret.append(title)
-            ret.append('C')
-
-        return ret
-
     def search(self, results, media, lang):
+        Logging("####### Start search #########", 'Info')
         #https://www.javlibrary.com/
         #https://javdb.com/
         # https://pornav.co/  fc2등 노모 검색
         # https://www.jav321.com/
         # https://aa9969.com/ko/ #7mmtv
-
         nResult=0
-        Logging("####### Start search #########",'Info')
         Logging('option Check dmm: ' + str(Prefs['dmm_use']),'Info')
         Logging('option check r18: ' + str(Prefs['r18_use']),'Info')
         Logging('option check javbus: ' + str(Prefs['javbus_use']),'Info')
@@ -378,8 +363,10 @@ class redstar_javscraper(Agent.Movies):
 
     def update(self, metadata, media, lang):
         Logging("####### Start Update #########", 'Info')
+
         nTitle=media.title
         Logging('MediaTitle: ' + nTitle, 'Debug')
+
         # name = '[' + id + '] ' + title + ' §' + 'DMMa' + '§' + uncResult + '§' + id+ '§'+Y/N/C
         # 0: ID, 타이틀 [OAE-101] PerfectBody..  /  1: 검색사이트 구분자   /  2: 노모유모확인 / 3: 오리지널 타이틀 / 
         # #4 Y:파일명에서, 타이틀있음, N: 파일명에서, 타이틀 없음 C: 웹크롤링 타이틀
@@ -419,6 +406,31 @@ class redstar_javscraper(Agent.Movies):
             # Logging('javdb result: ' + str(nResult), 'Debug')
         Logging("####### End update #########", 'Info')
 
+    def get_fileinfo(self,media):
+        # 파일에서 정보를 읽어 품번, 제목을 리턴함
+        Logging('### 파일에서 정보읽기 시작 ###', 'Debug')
+        n_ret=[]
+        filename = urllib.unquote(media.filename).decode('utf8')
+        filename = os.path.splitext(filename)[0]
+        filename = os.path.basename(filename).strip()
+        Logging('입력 파일명: ' + filename,'Debug')
+        pattern = '(?i)(TOKYO.*)-n[0-9]{3,}|((CARIB.*)|(1PONDO.*)|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}'
+        nMatch = re.search(pattern, filename)
+        if (nMatch is not None):
+            poombun=nMatch.group(0).upper()
+            pattern = '(?i)(TOKYO.*)-[A-Z]{1,}[0-9]{3,}|((CARIB.*)|(1PONDO.*)_[0-9]{1,}|\w{2,}|((FC2).*(PPV)))-[0-9]{3,}'
+            title = re.sub(pattern,'', filename)  # 품번 제거
+            pattern = '\([^)]*\)|\[[^)]*\]'
+            title = re.sub(pattern, '', title)  # 괄호와 대괄호 사이 글자 제거
+            if title == ' ': title=''
+            Logging('### Poombun output: ' + poombun , 'Debug')
+            Logging(title, 'Debug')
+            n_ret.append(poombun)
+            n_ret.append(title)
+            return n_ret
+        else:
+            return None
+
     def dmm_search(self,results,media,lang):
         ##############################
         ###### dmm video 검색  ########
@@ -426,23 +438,30 @@ class redstar_javscraper(Agent.Movies):
 
         Logging('##### Start dmm video search #####','Info')
         SEARCH_URL = 'https://www.dmm.co.jp/digital/videoa/-/list/search/=/?searchstr='
+        Logging('Media input title: ' + media.name,'Debug')
 
-        org_id = poombun_check(media.name).replace(' ','-').upper()
+        getfileinfo=self.get_fileinfo(media)
+        if getfileinfo is None:
+            Logging('파일 정보를 분석할 수 없어 검색을 종료합니다', 'Debug')
+            return
+        Log('품번: ' + getfileinfo[0])
+        Log('타이틀: <' + getfileinfo[1] + '>')
+        org_id=getfileinfo[0]
+        title_fromfile=getfileinfo[1].strip()
+
+        # org_id = poombun_check(media.name,media.filename).replace(' ','-').upper() #파일명에서 품번 가져옴
+        # 품번이 공백이면 종료, dmm은 검색시 하이픈 대신 00을 사용함. DV품번은 0 하나만 들어감
         if (org_id == ''): return 0
-        if (org_id.find('DV-') > -1):
-            release_id = org_id.replace('-', '0')
-        else:
-            release_id=org_id.replace('-','00')
+        if (org_id.find('DV-') > -1): release_id = org_id.replace('-', '0')
+        else: release_id=org_id.replace('-','00')
 
         Logging('******* DMM Video 검색 시작(Media search start) ****** ','Info')
         Logging("### Release ID:    " + str(release_id) + ' org_id: ' + str(org_id),'Debug')  # Release ID: IPZ00929 org_id: IPZ-929
         searchResults = Get_search_url(SEARCH_URL, release_id)
         if (searchResults <> ''):
             nResult = searchResults.find('<ul id="list">') #검색결과 없음
-            # Logging(searchResults)
-            # Logging(nResult)
             if (nResult <> -1):
-                Logging('##### dmm Video Result Found #####','Info')
+                Logging('##### dmm Video Result Found #####','Error')
                 if (uncensored_check(media.filename) == 1):
                     uncResult = 'U'
                 else:
@@ -451,11 +470,15 @@ class redstar_javscraper(Agent.Movies):
                 searchResults=String_slice(searchResults,'<ul id="list">','(function()')
                 content_id = String_slice(searchResults,'content_id":"','"')
                 Logging(' Content_id: ' + content_id, 'Debug')
-                title = String_slice(searchResults, 'class="txt">', '<')
-                title_arr = self.get_title(media, title)
-                title=title_arr[0] #타이틀명
-                id= org_id
-                name= '[' + id + '] ' + title + ' §' + 'DMMo' + '§' + uncResult + '§' + id +'§' + title_arr[1]
+                id = org_id
+                searchtype='DMMo'
+                title = String_slice(searchResults, 'alt="', '"')
+                if (Prefs['filenametotitle'] == False or title_fromfile == ''):
+                    titletype = 'N'
+                else:
+                    title=title_fromfile.strip()
+                    titletype='Y'
+                name= '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id +'§' + titletype
                 score=100
                 results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
                 Logging('##Search Update Result ==> id: ' + content_id + ' name: ' + name + ' score : ' + str(score), 'Debug')
@@ -486,10 +509,14 @@ class redstar_javscraper(Agent.Movies):
                 content_id = String_slice(searchResults,'content_id":"','"')
                 Logging('amature ContentID: ' + content_id, 'Debug')
                 id= org_id
-                title=String_slice(searchResults,'class="txt">','<')
-                title_arr = self.get_title(media, title)
-                title = title_arr[0]  # 타이틀명
-                name = '[' + id + '] ' + title + ' §' + 'DMMo' + '§' + uncResult + '§' + id + '§' + title_arr[1]
+                searchtype='DMMa'
+                title = String_slice(searchResults, 'class="txt">', '<')
+                if (Prefs['filenametotitle'] == True and title_fromfile != ''):
+                    title=title_fromfile
+                    titletype='Y'
+                else:
+                    titletype = 'N'
+                name= '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id +'§' + titletype
                 score=100
                 results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
                 return 1
@@ -503,9 +530,17 @@ class redstar_javscraper(Agent.Movies):
         ##############################
         Logging('##### Start r18 video search #####', 'Info')
         SEARCH_URL = 'https://www.r18.com/common/search/searchword='
-        org_id = poombun_check(media.name).replace(' ','-').upper()
-        release_id=org_id
 
+        getfileinfo=self.get_fileinfo(media)
+        if getfileinfo is None:
+            Logging('파일 정보를 분석할 수 없어 검색을 종료합니다', 'Debug')
+            return
+        Log('품번: ' + getfileinfo[0])
+        Log('타이틀: <' + getfileinfo[1] + '>')
+        org_id=getfileinfo[0]
+        title_fromfile=getfileinfo[1].strip()
+        release_id = org_id
+        
         Logging('******* r18 미디어 검색 시작(r18 Media search start) ****** ','Info')
         Logging("Release ID:    " + str(release_id) + ' org_id: ' + org_id,'Debug')
         try:
@@ -533,10 +568,13 @@ class redstar_javscraper(Agent.Movies):
                 id = id.upper()
                 title = searchResult.xpath('a//dl//dt')[0].text_content()
                 if title.startswith("SALE"): title = title[4:]
-                title_arr = self.get_title(media, title)
-                title = title_arr[0]  # 타이틀명
-                Logging(id + " : " + title, 'Debug')
-                name = '[' + id + '] ' + title + '§' + 'r18' + '§' + uncResult+ '§' + id +'§' + title_arr[1]
+                searchtype='r18'
+                if (Prefs['filenametotitle'] == True and title_fromfile != ''):
+                    title=title_fromfile
+                    titletype='Y'
+                else:
+                    titletype = 'N'
+                name= '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id +'§' + titletype
                 score = 100 - Util.LevenshteinDistance(id.lower(), release_id.lower())
                 results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
                 Logging('ID: ' + content_id + ' name: ' + "[" + id + "] " + title, 'Debug')
@@ -557,10 +595,18 @@ class redstar_javscraper(Agent.Movies):
         ###############################
         Logging('##### Start javbus video search #####','Info')
         SEARCH_URL = 'https://www.javbus.com/search/'
-        org_id = poombun_check(media.name).replace(' ','-').upper()
-        release_id=org_id
 
-        # Logging('******* javbus Video 검색 시작(Media search start) ****** ')
+        getfileinfo=self.get_fileinfo(media)
+        if getfileinfo is None:
+            Logging('파일 정보를 분석할 수 없어 검색을 종료합니다', 'Debug')
+            return
+        Log('품번: ' + getfileinfo[0])
+        Log('타이틀: <' + getfileinfo[1] + '>')
+        org_id=getfileinfo[0]
+        title_fromfile=getfileinfo[1].strip()
+        release_id = org_id
+
+        Logging('******* javbus Video 검색 시작(Media search start) ****** ','Info')
         Logging("Release ID:    " + str(release_id),'Debug')
         try: searchResults=HTTP.Request(SEARCH_URL + release_id, timeout=int(Prefs['timeout'])).content # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
         except:	return 0
@@ -580,10 +626,14 @@ class redstar_javscraper(Agent.Movies):
                 content_id = String_slice(searchResults, '<date>', '</date>')
                 id = org_id
                 title = String_slice(searchResults, 'title="', '">')
-                title_arr = self.get_title(media, title)
-                title = title_arr[0]  # 타이틀명
+                searchtype='javbus'
+                if (Prefs['filenametotitle'] == True and title_fromfile != ''):
+                    title=title_fromfile
+                    titletype='Y'
+                else:
+                    titletype = 'N'
+                name= '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id +'§' + titletype
                 score = 100
-                name = '[' + id + '] ' + title + '§' + 'javbus' + '§' + uncResult + '§' + id +'§' + title_arr[1]
                 results.Append(MetadataSearchResult(id=content_id, name=name , score=score, lang=lang))# id는 내부적사용, name은 미리보기 타이틀명
                 Logging('ContentID: ' + content_id + ' org_id: ' + org_id,'Debug')
                 # Logging('Title: ' + title)
@@ -602,11 +652,16 @@ class redstar_javscraper(Agent.Movies):
         Logging('##### Start pornav video search #####','Info')
         SEARCH_URL = 'http://pornav.co/jp/search?q='
 
-        # nMediaName = media.name
-        # nMediaName = nMediaName.upper()
-        org_id = poombun_check(media.name).replace(' ','-').upper()
-        release_id=poombun_split_num(org_id)
-        
+        getfileinfo=self.get_fileinfo(media)
+        if getfileinfo is None:
+            Logging('파일 정보를 분석할 수 없어 검색을 종료합니다', 'Debug')
+            return
+        Log('품번: ' + getfileinfo[0])
+        Log('타이틀: <' + getfileinfo[1] + '>')
+        org_id=getfileinfo[0]
+        title_fromfile=getfileinfo[1].strip()
+        release_id=poombun_split_num(org_id) #아마추어 작품의 경우 품번 숫자만 필요해서 숫자만 추리는 함수 호출
+
         Logging("Release ID:    " + str(release_id) + ' # org_id: ' + org_id,'Debug')
         try:
             searchResults = HTTP.Request(SEARCH_URL + release_id).content  # post로 보낼경우 value={'aaa' : 내용} 으로 보냄
@@ -633,12 +688,15 @@ class redstar_javscraper(Agent.Movies):
                     content_id=org_id
                     id = org_id
                     title = String_slice(searchResults, 'data-title="' + release_id + ' ', '"')
-                    title_arr = self.get_title(media, title)
-                    title = title_arr[0]  # 타이틀명
+                    searchtype = 'pornav'
+                    if (Prefs['filenametotitle'] == True and title_fromfile != ''):
+                        title = title_fromfile
+                        titletype = 'Y'
+                    else:
+                        titletype = 'N'
+                    name = '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id + '§' + titletype
                     score = 100
-                    name = '[' + id + '] ' + title + '§' + 'pornav' + '§' + uncResult+ '§' + id +'§' + title_arr[1]
-                    results.Append(MetadataSearchResult(id=content_id, name=name , score=score,
-                                                        lang=lang))  # id는 내부적사용, name은 미리보기 타이틀명
+                    results.Append(MetadataSearchResult(id=content_id, name=name , score=score, lang=lang))  # id는 내부적사용, name은 미리보기 타이틀명
                     Logging('ContentID: ' + content_id + ' org_id: ' + org_id,'Debug')
                     return 1
 
@@ -652,8 +710,15 @@ class redstar_javscraper(Agent.Movies):
         Logging('##### Start javdb video search #####','Info')
         SEARCH_URL = 'https://javdb.com/search?q='
 
-        org_id = poombun_check(media.name).replace(' ','-').upper()
-        release_id=poombun_split_num(org_id)
+        getfileinfo=self.get_fileinfo(media)
+        if getfileinfo is None:
+            Logging('파일 정보를 분석할 수 없어 검색을 종료합니다', 'Debug')
+            return
+        Log('품번: ' + getfileinfo[0])
+        Log('타이틀: <' + getfileinfo[1] + '>')
+        org_id=getfileinfo[0]
+        title_fromfile=getfileinfo[1].strip()
+        release_id=poombun_split_num(org_id) #아마추어 작품의 경우 품번 숫자만 필요해서 숫자만 추리는 함수 호출
 
         Logging('******* javdb Video 검색 시작(Media search start) ****** ','Info')
         Logging("### Release ID:    " + str(release_id) + ' org_id: ' + str(org_id),'Info')  # Release ID: IPZ00929 org_id: IPZ-929
@@ -676,14 +741,19 @@ class redstar_javscraper(Agent.Movies):
                     uncResult = 'C'
                 Logging('### UNC:' + uncResult,'Debug')
                 searchResults=String_slice(searchResults,'videos video-container','</section>')
+                if (searchResults.find(release_id) == -1): return 0
                 content_id = String_slice(searchResults, 'a href="','"').replace('/v/','')
                 Logging(' Content_id: ' + content_id,'Debug')
+                id = org_id
                 title = String_slice(searchResults, 'video-title">', '<')
-                title_arr = self.get_title(media, title)
-                title = title_arr[0]  # 타이틀명
-                id= org_id
-                name= '[' + id + '] ' + title + '§' + 'javdb' + '§' + uncResult+ '§' + id +'§' + title_arr[1]
-                score=100
+                searchtype = 'javdb'
+                if (Prefs['filenametotitle'] == True and title_fromfile != ''):
+                    title = title_fromfile
+                    titletype = 'Y'
+                else:
+                    titletype = 'N'
+                name = '[' + id + '] ' + title + ' §' + searchtype + '§' + uncResult + '§' + id + '§' + titletype
+                score = 100
                 results.Append(MetadataSearchResult(id=content_id, name=name, score=score, lang=lang))
                 Logging('##Search Update Result ==> id: ' + content_id + ' name: ' + name + ' score : ' + str(score),'Debug')
                 return 1
@@ -693,15 +763,46 @@ class redstar_javscraper(Agent.Movies):
             Logging('javdb Video result not found1','Error')
         return 0
 
+    def func_update_title(self,metadata,media,id,title,ncroling,Trans):
+        # title: 크롤링에서 가져온 제목, ncroling: Y일때 파일명을 타이틀로, N일때 웹크롤링을 타이틀로
+
+        Logging('func_update_title 함수 시작','Debug')
+        try:
+            if (ncroling == 'Y'):
+                Logging('파일명 데이터를 타이틀로', 'Debug')
+                rTitle = metadata.title
+                metadata.title_sort = id
+                metadata.title = rTitle.strip()
+            else:
+                nTitle=metadata.title.replace('[','').replace(']','')
+                nTitlesort=metadata.title_sort
+                Logging(nTitle,'Debug')
+                Logging(nTitlesort, 'Debug')
+                if ((nTitlesort != None) and (nTitle != nTitlesort)):
+                        Logging('타이틀과 정렬 타이틀이 달라 타이틀명을 수정하지 않습니다.', 'Debug')
+                else:
+                    Logging('웹크롤링 데이터를 타이틀로', 'Debug')
+                    nTitle_Trans = Papago_Trans(title, Trans)
+                    rTitle = '[' + id + "] " + nTitle_Trans
+                    metadata.title_sort = id + ' ' + nTitle_Trans
+                    metadata.title = rTitle.strip()
+            Logging('## Title: ' + metadata.title, 'Debug')
+        except:
+            Logging('@@@ 제목 오류 @@@', 'Error')
+            pass
+
+        Logging('### 제목 종료 ###', 'info')
+        Logging('func_update_title 함수 종료','Debug')
+
     def dmm_update(self, metadata, media, lang, nOrgID,ncroling):
 
         ################################################
         ################## DMM update ##################
         ################################################
         if (nOrgID.find('[') <> -1 ):
-            org_id=poombun_check(nOrgID)
+            org_id=poombun_check(nOrgID,'')
         else:
-            org_id=metadata.id.replace('00','-')
+            org_id=nOrgID
 
         Logging('### 검색 사이트: DMM 일반 영상 / UpdateSite: DMM Video ###','Info')
         DETAIL_URL = 'https://www.dmm.co.jp/digital/videoa/-/detail/=/cid='
@@ -725,25 +826,10 @@ class redstar_javscraper(Agent.Movies):
 
         # 제목
         id =org_id.upper()
-        nTitle=String_slice(searchResults, 'alt="', '"')
+        nTitle=String_slice(searchResults, 'item fn">', '<')
         Logging(' title : ' + nTitle + ' OrgTitle:' + metadata.title ,'Debug')
-        try:
-            Logging('############## 제목 시작 ###################','info')
-            if(ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                metadata.title_sort = metadata.title.replace('[', '').replace(']', '')
-                metadata.original_title = nTitle
-            else:#(ncroling == 'N' or ncroling == 'C'):
-                Logging('웹크롤링 데이터를 타이틀로','Debug')
-                nTitle_Trans = Papago_Trans(nTitle, 'ja')
-                metadata.title = '[' + id + "] " + nTitle_Trans
-                metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
-                metadata.original_title = nTitle
-            Logging('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title,'Debug')
-            Logging('############## 제목 종료 ###################', 'info')
-        except:
-            Logging('############## 제목 오류 #################', 'Error')
-            pass
+        metadata.original_title=nTitle
+        self.func_update_title(metadata,media,id,nTitle,ncroling,'ja')
 
         # 스튜디오
         sTemp = String_slice(searchResults, 'メーカー：', '</tr>') # 스튜디오 정보
@@ -918,7 +1004,7 @@ class redstar_javscraper(Agent.Movies):
         DETAIL_URL = 'https://www.r18.com/videos/vod/movies/detail/-/id='
         DETAIL_URL2 = 'https://www.r18.com/videos/vod/amateur/detail/-/id='
 
-        org_id = poombun_check(nOrgID)
+        org_id = poombun_check(nOrgID,'')
 
         #일반 검색에서 안나올 경우 아마추어 URL로 다시 확인함
         try:
@@ -936,25 +1022,9 @@ class redstar_javscraper(Agent.Movies):
         Logging('##### r18 제목 시작 ####','Info')
         id = org_id.upper()
         nTitle=detailItem(root,'//cite[@itemprop="name"]')
-
-        try:
-            if(ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                metadata.title_sort = metadata.title.replace('[', '').replace(']', '')
-                metadata.original_title = nTitle
-            else:#(ncroling == 'N' or ncroling == 'C'):
-                Logging('웹크롤링 데이터를 타이틀로','Debug')
-                nTitle_Trans = Papago_Trans(nTitle, 'en')
-                metadata.title = '[' + id + "] " + nTitle_Trans
-                metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
-                metadata.original_title = nTitle
-            Logging('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title,'Debug')
-
-        except:
-            Logging('@@@ r18 제목 오류 @@@', 'Error')
-            pass
+        metadata.original_title = nTitle
+        self.func_update_title(metadata, media, id, nTitle, ncroling,'en')
         Logging('#### r18 제목 종료 ####', 'Info')
-
 
         # 스튜디오
         metadata.studio = detailItem(root,'//dd[@itemprop="productionCompany"]//a') # 스튜디오 정보
@@ -1071,7 +1141,7 @@ class redstar_javscraper(Agent.Movies):
         Logging('### 검색 사이트: javbus 일반 영상 / UpdateSite: javbus Video ###','Info')
         DETAIL_URL = 'https://www.javbus.com/'
 
-        org_id=poombun_check(nOrgID)
+        org_id=poombun_check(nOrgID,'')
 
         try:
             searchResults = HTTP.Request(DETAIL_URL + metadata.id , headers = {'Referer': 'http://www.google.com'}, timeout=int(Prefs['timeout'])).content
@@ -1079,7 +1149,6 @@ class redstar_javscraper(Agent.Movies):
             Logging('@@@ Update content load failed','Error')
             return 0
 
-        # Logging(searchResults)
         nResult = searchResults.find('<div class="container">')  # 검색결과 확인
         if (nResult == -1):
             Logging('@@@ Update content search result failed1', 'Error')
@@ -1088,30 +1157,13 @@ class redstar_javscraper(Agent.Movies):
         if (searchResults == ''):
             Logging('@@@ Update content search result failed2', 'Error')
             return 0
-        # Logging(searchResults)
-
 
         Logging('#### javbus 제목 시작####', 'Info')
         id = org_id.upper()
         nTitle = String_slice(searchResults, 'title="', '"')
-        try:
-            if(ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                metadata.title_sort = metadata.title.replace('[', '').replace(']', '')
-                metadata.original_title = nTitle
-            else:#(ncroling == 'N' or ncroling == 'C'):
-                Logging('웹크롤링 데이터를 타이틀로','Debug')
-                nTitle_Trans = Papago_Trans(nTitle, 'ja')
-                metadata.title = '[' + id + "] " + nTitle_Trans
-                metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
-                metadata.original_title = nTitle
-            Logging('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title,'Debug')
-        except:
-            Logging('@@@ javbus 제목 오류 @@@', 'Error')
-            pass
+        metadata.original_title = nTitle
+        self.func_update_title(metadata, media, id, nTitle, ncroling, 'ja')
         Logging('#### javbus 제목 종료 ####', 'Info')
-
-
 
         # 스튜디오=> 제조사
         try:
@@ -1336,33 +1388,9 @@ class redstar_javscraper(Agent.Movies):
         nTitle = nTitle.replace('FC2 PPV ', '')
         nTitle = nTitle.replace(release_id.upper(), '')
         nTitle = nTitle.replace('TOKYO HOT','')
-        try:
-            if(ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                metadata.title_sort = metadata.title.replace('[', '').replace(']', '')
-                metadata.original_title = nTitle
-            else:#(ncroling == 'N' or ncroling == 'C'):
-                Logging('웹크롤링 데이터를 타이틀로','Debug')
-                nTitle_Trans = Papago_Trans(nTitle, 'ja')
-                metadata.title = '[' + id + "] " + nTitle_Trans
-                metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
-                metadata.original_title = nTitle
-            Logging('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title,'Debug')
-        except:
-            Logging('@@@ pornav 제목 오류 @@@', 'Error')
-            pass
+        metadata.original_title = nTitle
+        self.func_update_title(metadata, media, id, nTitle, ncroling, 'ja')
         Logging('#### pornav 제목 종료 ####', 'Info')
-
-        # # 제목
-        # try:
-        #     Logging('=======  title Info start =========','Info')
-        #     metadata.title = "[" + id.upper() + "] " + nTitle_Trans
-        #     metadata.title_sort = id + ' ' + nTitle_Trans
-        #     metadata.original_title = nTitle
-        #     Logging(' Title: ' + metadata.title,'Debug')
-        #     Logging('=======  title Info end =========','Info')
-        # except:
-        #     Logging('@@@ Title failed','Error')
 
         # 스튜디오=> 제조사
         try:
@@ -1556,7 +1584,7 @@ class redstar_javscraper(Agent.Movies):
         ################################################
         Logging('### 검색 사이트: javdb 일반 영상 / UpdateSite: javdb Video ###','Info')
         DETAIL_URL = 'https://javdb.com/v/'
-        org_id=poombun_check(nOrgID)
+        org_id=poombun_check(nOrgID,'')
         # release_id=poombun_split_num(org_id)
 
         try:
@@ -1575,30 +1603,13 @@ class redstar_javscraper(Agent.Movies):
             Logging('@@@ Update content search result failed2','Error')
             return 0
         # Logging(searchResults)
-        id = org_id.upper()
 
-        Logging('#### pornav 제목 시작####', 'Info')
+        Logging('#### javdb 제목 시작####', 'Info')
         id= String_slice(media.title,'[',']').upper()
         nTitle = String_slice(searchResults, '<strong>', '<').replace(id,'')
-        # nTitle = nTitle.replace('FC2-PPV ', '')
-        # nTitle = nTitle.replace(release_id.upper(), '')
-        # nTitle = nTitle.replace('TOKYO-HOT','')
-        try:
-            if(ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                metadata.title_sort = metadata.title.replace('[', '').replace(']', '')
-                metadata.original_title = nTitle
-            else:#(ncroling == 'N' or ncroling == 'C'):
-                Logging('웹크롤링 데이터를 타이틀로','Debug')
-                nTitle_Trans = Papago_Trans(nTitle, 'ja')
-                metadata.title = '[' + id + "] " + nTitle_Trans
-                metadata.title_sort = id.replace('[','').replace(']','') + ' ' + nTitle_Trans
-                metadata.original_title = nTitle
-            Logging('## Title: ' + metadata.title + '  sort: ' + metadata.title_sort + '  orgtitle: ' + metadata.original_title,'Debug')
-        except:
-            Logging('@@@ pornav 제목 오류 @@@', 'Error')
-            pass
-        Logging('#### pornav 제목 종료 ####', 'Info')
+        metadata.original_title = nTitle
+        self.func_update_title(metadata, media, id, nTitle, ncroling, 'ja')
+        Logging('#### javdb 제목 종료 ####', 'Info')
 
         # 스튜디오=> 제조사
         try:
@@ -1729,7 +1740,7 @@ class redstar_javscraper(Agent.Movies):
             # Logging('######## series info')
             # Logging(sTemp)
             series_info = Extract_str(searchResults, '系列', '</div>')
-            Logging(series_info,'Debug')
+            # Logging(series_info,'Debug')
             # Logging('SeriesInfo: ' + series_info)
             if (series_info is not None):
                 if (series_info[0] <> '----'):
