@@ -765,27 +765,24 @@ class redstar_javscraper(Agent.Movies):
 
     def func_update_title(self,metadata,media,id,title,ncroling,Trans):
         # title: 크롤링에서 가져온 제목, ncroling: Y일때 파일명을 타이틀로, N일때 웹크롤링을 타이틀로
-
         Logging('func_update_title 함수 시작','Debug')
+        firststring = metadata.title[0]
+        Logging('First string: ' + firststring, 'Debug')
         try:
             if (ncroling == 'Y'):
-                Logging('파일명 데이터를 타이틀로', 'Debug')
-                rTitle = metadata.title
-                metadata.title_sort = id
+                Logging('파일명 => 제목', 'Debug')
+                rTitle = '▶' + metadata.title.strip()
+                metadata.title = rTitle
+                metadata.title_sort = rTitle.replace('[','').replace(']','').replace('▶','')
+            elif (ncroling == 'N'):
+                Logging('웹크롤링 => 제목', 'Debug')
+                nTitle_Trans = Papago_Trans(title, Trans)
+                rTitle = '[' + id + "] " + nTitle_Trans
+                metadata.title_sort = id + ' ' + nTitle_Trans
                 metadata.title = rTitle.strip()
-            else:
-                nTitle=metadata.title.replace('[','').replace(']','')
-                nTitlesort=metadata.title_sort
-                Logging(nTitle,'Debug')
-                Logging(nTitlesort, 'Debug')
-                if ((nTitlesort != None) and (nTitle != nTitlesort)):
-                        Logging('타이틀과 정렬 타이틀이 달라 타이틀명을 수정하지 않습니다.', 'Debug')
-                else:
-                    Logging('웹크롤링 데이터를 타이틀로', 'Debug')
-                    nTitle_Trans = Papago_Trans(title, Trans)
-                    rTitle = '[' + id + "] " + nTitle_Trans
-                    metadata.title_sort = id + ' ' + nTitle_Trans
-                    metadata.title = rTitle.strip()
+            elif (firststring == '▶'):
+                Logging('첫번째 문자열에 ▶ 발견. 제목행은 업데이트 하지 않습니다','Info')
+
             Logging('## Title: ' + metadata.title, 'Debug')
         except:
             Logging('@@@ 제목 오류 @@@', 'Error')
@@ -795,7 +792,6 @@ class redstar_javscraper(Agent.Movies):
         Logging('func_update_title 함수 종료','Debug')
 
     def dmm_update(self, metadata, media, lang, nOrgID,ncroling):
-
         ################################################
         ################## DMM update ##################
         ################################################
