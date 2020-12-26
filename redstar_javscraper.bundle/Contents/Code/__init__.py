@@ -220,6 +220,7 @@ def Get_search_url(SEARCH_URL, txt, reqMode='GET'):
             # Logging('Request is GET')
             encodedId = urllib2.quote(txt)
             url = SEARCH_URL + encodedId
+            url.add_header('age_check_done', 1)
             Logging('GET SearchURL: ' + url, 'Debug')
             req = urllib2.Request(url)
         try:
@@ -437,6 +438,8 @@ class redstar_javscraper(Agent.Movies):
         ##############################
 
         Logging('##### Start dmm video search #####','Info')
+        # SEARCH_URL = 'https://www.dmm.co.jp/age_check/=/declared=yes/?rurl='
+        # SEARCH_URL = SEARCH_URL + 'http%3A%2F%2Fwww.dmm.co.jp%2Fdigital%2Fvideoa%2F-%2Flist%2Fsearch%2F%3D%2F%3Fsearchstr%3D'
         SEARCH_URL = 'https://www.dmm.co.jp/digital/videoa/-/list/search/=/?searchstr='
         Logging('Media input title: ' + media.name,'Debug')
 
@@ -807,7 +810,7 @@ class redstar_javscraper(Agent.Movies):
 
         Logging('ORG_ID: ' + org_id + ' metadataID: ' + str(metadata.id),'Debug')
 
-        searchResults = Get_search_url(DETAIL_URL, metadata.id)
+        searchResults = Get_search_url(DETAIL_URL, metadata.id + '/?i3_ref=list&i3_ord=1')
         searchResults = String_slice(searchResults, 'area-headline group', 'div id="recommend"')
         if (searchResults == ''):
             Logging('### 검색 사이트: DMM 아마추어 영상 / UpdateSite: DMM Amateur ###','Info')
